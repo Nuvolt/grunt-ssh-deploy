@@ -87,20 +87,29 @@
       // zips local content with respecting exclude list
       var zipContentForDeployment = function(callback) {
         grunt.log.subhead('-------------------------------ZIPPING FOLDER');
-        var excludeList = " --exclude='./deploy.tgz'";
+        var excludeList = "";
+
         if (options.exclude_list) {
-          options.exclude_list.map(function(item){
+          options.exclude_list.map(function(item) {
             excludeList += " --exclude='./" + item + "'";
           });
         }
-        var command = "tar -czvf deploy.tgz ." + excludeList;
+
+        options.src_root_path = options.src_root_path || ".";
+
+        var command = "tar -czvf ./deploy.tgz "+excludeList+" "+options.src_root_path ;
+          console.log(command);
         execLocal(command, callback);
       };
       // upload zipfile to server via scp
       var uploadZipFile = function(callback) {
         grunt.log.subhead('-------------------------------UPLOAD ZIPFILE');
         var scpAuthString = server.username + "@" + server.host + ":" + options.deploy_path + "/releases/" + timeStamp + '/';
-        var command = "scp ./deploy.tgz " + scpAuthString;
+        var command = "scp";
+        if(server.port != 22)
+            command +=' -P '+server.port;
+        command += " ./deploy.tgz " + scpAuthString;
+
         execLocal(command, callback);
       };
       // unzips on remote and removes zipfolder
@@ -109,6 +118,9 @@
 
         var goToCurrent = "cd " + options.deploy_path + "/releases/" + timeStamp;
         var untar = "tar -xzvf deploy.tgz";
+          if(options.src_root_path !== '.')
+            untar += " --strip-components=1";
+
         var cleanup = "rm " + options.deploy_path + "/releases/" + timeStamp + "/deploy.tgz";
         var command = goToCurrent + " && " + untar + " && " + cleanup;
         console.log(callback)
